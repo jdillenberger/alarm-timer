@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+
+import os
+import re
+import signal
+import subprocess
+import sys
+import time
+from tqdm import tqdm
+
+# Configuration
+soundfile_path = '/usr/share/sounds/freedesktop/stereo/complete.oga'
+sound_replays = 5
+replay_duration = 1
+
+# Define Timing mapping:
+time_to_seconds = {
+    'd': 86400,
+    'h': 3600,
+    'm': 60,
+    's': 1
+}
+
+# Parse the duration - Initialize duration counter
+counter = 0
+for arg in sys.argv[1:]:
+    if arg[-1].isalpha() and arg[-1].lower() in time_to_seconds:
+        counter += int(arg[:-1]) * time_to_seconds[arg[-1].lower()]
+    elif arg.isnumeric():
+        counter += int(arg)
+    else:
+        print('Alarm was not able to parse the duration')
+
+# Cancel if no duration was given
+if counter == 0:
+    print('You need to set a duration for the alarm to start.');
+    exit()
+
+counter = counter - int(counter / 1800)
+
+# Wait and show progress bar - exit on ctrl-c
+tqdm.format_interval(counter-1)
+
+
+bar_format = "{remaining}|{bar}|"
+
+for _ in tqdm(range(counter), bar_format=bar_format):
+    try:
+        time.sleep(1)
+    except KeyboardInterrupt:
+        exit()
+
+# Play alarm sound, surpress subprocess warnings
+for _ in range(sound_replays):
+    try:
+        p = subprocess.Popen(
+                ['mplayer', soundfile_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True
+        )
+        out, err = p.communicate()
+        time.sleep(replay_duration);
+    except KeyboardInterrupt:
+        sys.exit()
+
+
